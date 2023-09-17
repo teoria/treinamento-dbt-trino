@@ -1,0 +1,10 @@
+devops/volumes/
+target/
+dbt_modules/
+logs/
+**/.DS_Store
+venv_dbt
+.ideia
+.vscode
+dbt_packages/*
+.dbt/.user.yml

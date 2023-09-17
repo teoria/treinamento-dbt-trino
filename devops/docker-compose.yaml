@@ -1,0 +1,102 @@
+
+---
+version: '3'
+ 
+services:
+  postgres:
+    image: postgres:13-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: jaffle_shop
+    volumes:
+      - ./volumes/postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    restart: always
+  
+  minio:
+    hostname: minio
+    image: minio/minio
+    container_name: minio
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - './volumes/minio/data/:/data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+      MINIO_DEFAULT_BUCKETS: datalake
+    command: server --console-address ":9001" /data
+    
+  # This job will create the "datalake" bucket on Minio
+  mc-job:
+    image: 'minio/mc:RELEASE.2022-05-09T04-08-26Z'
+    entrypoint: |
+      /bin/bash -c "
+      sleep 5;
+      /usr/bin/mc config --quiet host add myminio http://minio:9000 minio minio123;
+      /usr/bin/mc mb --quiet myminio/datalake
+      "
+    depends_on:
+      - minio
+ 
+  hive-metastore:
+    hostname: hive-metastore
+    image: 'starburstdata/hive:3.1.2-e.18'
+    ports:
+      - '9083:9083' # Metastore Thrift
+    environment:
+      HIVE_METASTORE_DRIVER: org.postgresql.Driver
+      HIVE_METASTORE_JDBC_URL: jdbc:postgresql://postgres:5432/jaffle_shop
+      HIVE_METASTORE_USER: airflow
+      HIVE_METASTORE_PASSWORD: airflow
+      HIVE_METASTORE_WAREHOUSE_DIR: s3://datalake/
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio123
+      S3_PATH_STYLE_ACCESS: "true"
+      REGION: ""
+      GOOGLE_CLOUD_KEY_FILE_PATH: ""
+      AZURE_ADL_CLIENT_ID: ""
+      AZURE_ADL_CREDENTIAL: ""
+      AZURE_ADL_REFRESH_URL: ""
+      AZURE_ABFS_STORAGE_ACCOUNT: ""
+      AZURE_ABFS_ACCESS_KEY: ""
+      AZURE_WASB_STORAGE_ACCOUNT: ""
+      AZURE_ABFS_OAUTH: ""
+      AZURE_ABFS_OAUTH_TOKEN_PROVIDER: ""
+      AZURE_ABFS_OAUTH_CLIENT_ID: ""
+      AZURE_ABFS_OAUTH_SECRET: ""
+      AZURE_ABFS_OAUTH_ENDPOINT: ""
+      AZURE_WASB_ACCESS_KEY: ""
+      HIVE_METASTORE_USERS_IN_ADMIN_ROLE: "admin"
+    depends_on:
+      - postgres                                                                                                                            
+ 
+  coordinator:
+    image: "trinodb/trino:422" 
+    ports:
+      - "8080:8080"
+    container_name: "coordinator"
+    volumes:  
+      - ./trino/etc:/etc/trino
+
+  metabase:
+    image: metabase/metabase  #latest
+    container_name: metabase
+    hostname: metabase
+    volumes:
+     - ./metabase/starburst-2.0.1.metabase-driver.jar:/plugins/starburst-2.0.1.metabase-driver.jar
+     - ./volumes/metabase-data:/metabase
+    ports:
+      - 3000:3000
+    environment:
+      MB_DB_TYPE: h2
+      MB_DB_FILE: /metabase/h2.db
+      MB_PLUGINS_DIR: /plugins
