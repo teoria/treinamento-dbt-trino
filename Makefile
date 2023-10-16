@@ -16,10 +16,10 @@ pip_install:
 	. ./venv_dbt/bin/activate
 	venv_dbt/bin/pip install dbt-core dbt-postgres dbt-trino dbt-metricflow
 
-start: ## Inicia Postgres
+start: ## Inicia Serviços
 	docker compose -f devops/docker-compose.yaml up -d  
 
-stop: ## Desliga Metabase
+stop: ## Desliga Serviços
 	docker compose -f devops/docker-compose.yaml down  
 debug:
 	dbt debug --profiles-dir .dbt
