@@ -1,6 +1,6 @@
 # example profiles.yml file
 jaffle_shop:
-  target: dev
+  target: dev 
   outputs:
     dev:
       type: postgres

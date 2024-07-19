@@ -1,6 +1,7 @@
 -- Use the `ref` function to select from other models
 
 {{ config(
+    enabled = False,
     materialized='table',
     table_type='iceberg',
     properties= {

@@ -88,11 +88,11 @@ services:
       - ./trino/etc:/etc/trino
 
   metabase:
-    image: metabase/metabase  #latest
+    image: metabase/metabase:v0.50  #latest
     container_name: metabase
     hostname: metabase
     volumes:
-     - ./metabase/starburst-2.0.1.metabase-driver.jar:/plugins/starburst-2.0.1.metabase-driver.jar
+     - ./metabase/starburst-5.0.0.metabase-driver.jar:/plugins/starburst-5.0.0.metabase-driver.jar
      - ./volumes/metabase-data:/metabase
     ports:
       - 3000:3000
